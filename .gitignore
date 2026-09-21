@@ -1,0 +1,35 @@
+# Data and features (too large for git)
+features/
+*.npz
+*.parquet
+*.h5
+*.h5ad
+
+# Results (keep in separate releases)
+mil_results/
+e2e_results/
+frozen_results/
+lc25000_results/
+predictions/
+
+# WILDS data
+wilds_data/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+*.egg-info/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Checkpoints
+checkpoints/
+*.pt
+*.ckpt
