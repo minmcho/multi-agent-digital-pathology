@@ -44,9 +44,10 @@ BACKBONES = ['resnet18', 'vit_tiny', 'vit_b', 'uni', 'virchow', 'conch']
 MODELS = ['abmil', 'clam']
 
 # Slide-level splits (WILDS protocol: center-based OOD)
-TRAIN_CENTERS = [0, 1, 2]
-VAL_CENTER = 4
-TEST_CENTER = 3
+# HuggingFace WILDS CAMELYON17 has centers 0, 2, 3, 4 (missing center 1)
+TRAIN_CENTERS = [0, 2]   # 20 slides (ID train)
+VAL_CENTER = [4]          # 10 slides (OOD validation)
+TEST_CENTER = [3]         # 10 slides (OOD test)
 
 # Training hyperparameters
 LEARNING_RATE = 1e-4
@@ -491,8 +492,8 @@ def main():
         # Load datasets
         try:
             train_ds = MILDataset(args.features_dir, bb_name, TRAIN_CENTERS)
-            val_ds = MILDataset(args.features_dir, bb_name, [VAL_CENTER])
-            test_ds = MILDataset(args.features_dir, bb_name, [TEST_CENTER])
+            val_ds = MILDataset(args.features_dir, bb_name, VAL_CENTER)
+            test_ds = MILDataset(args.features_dir, bb_name, TEST_CENTER)
         except FileNotFoundError as e:
             print(f"  Skipping {bb_name}: {e}")
             continue
