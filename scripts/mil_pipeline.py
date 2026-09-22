@@ -112,7 +112,7 @@ class MILDataset(Dataset):
             'patch_labels': torch.from_numpy(patch_labels),
             'slide_id': info['slide_id'],
             'center': info['center'],
-            'tumor_fraction': info['tumor_fraction'],
+            'tumor_fraction': torch.tensor(info['tumor_fraction'], dtype=torch.float32),
         }
 
 
@@ -320,9 +320,9 @@ def train_mil_model(model, train_loader, val_loader, device, model_name='abmil',
         n_train = 0
         
         for batch in train_loader:
-            x = batch['features'].to(device)
-            patch_labels = batch['patch_labels'].to(device)
-            tumor_fraction = batch['tumor_fraction'].to(device)
+            x = batch['features'].squeeze(0).to(device)  # (N, D) — remove batch dim
+            patch_labels = batch['patch_labels'].squeeze(0).to(device)  # (N,)
+            tumor_fraction = batch['tumor_fraction'].to(device)  # scalar
             
             optimizer.zero_grad()
             
@@ -354,7 +354,7 @@ def train_mil_model(model, train_loader, val_loader, device, model_name='abmil',
         
         with torch.no_grad():
             for batch in val_loader:
-                x = batch['features'].to(device)
+                x = batch['features'].squeeze(0).to(device)  # (N, D)
                 if model_name == 'abmil':
                     patch_logits, slide_logit, att = model(x)
                 else:
@@ -407,8 +407,8 @@ def evaluate_mil_model(model, test_loader, device, model_name='abmil'):
     
     with torch.no_grad():
         for batch in test_loader:
-            x = batch['features'].to(device)
-            patch_labels = batch['patch_labels'].to(device)
+            x = batch['features'].squeeze(0).to(device)  # (N, D)
+            patch_labels = batch['patch_labels'].squeeze(0).to(device)  # (N,)
             
             if model_name == 'abmil':
                 patch_logits, slide_logit, att = model(x)
