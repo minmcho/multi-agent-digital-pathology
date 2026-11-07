@@ -57,7 +57,6 @@ def download_lc25000():
     
     print("  Downloading LC25000...")
     # LC25000 is available on Kaggle and academic sources
-    # URL: https://academictorrents.com/details/7dea6c3f89c02b9b4a6c5c0b9b9b9b9b9b9b9b9
     # Or: pip install kaggle; kaggle datasets download -d andrewmvd/lung-and-colon-cancer-histopathological-images
     
     import subprocess
@@ -78,10 +77,10 @@ def download_lc25000():
     # Manual download instructions
     print("""
   MANUAL DOWNLOAD REQUIRED:
-  1. Download from: https://academictorrents.com/details/7dea6c3f89c02b9b4a6c5c0b9b9b9b9b9b9b9b9
-  2. Or from Kaggle: kaggle datasets download -d andrewmvd/lung-and-colon-cancer-histopathological-images
-  3. Extract to: """ + LC25000_DIR + """
-  4. Re-run this script
+  1. From Kaggle: kaggle datasets download -d andrewmvd/lung-and-colon-cancer-histopathological-images
+     (or https://www.kaggle.com/datasets/andrewmvd/lung-and-colon-cancer-histopathological-images)
+  2. Extract to: """ + LC25000_DIR + """
+  3. Re-run this script
 """)
 
 def load_lc25000_images():

@@ -50,8 +50,7 @@ def check_gpu():
 
 def check_data():
     datasets = {
-        "CAMELYON17 (WILDS)": os.path.join(DATA_DIR, "camelyon17_wilds"),
-        "CAMELYON17 (splits)": os.path.join(DATA_DIR, "camelyon17"),
+        "CAMELYON17": os.path.join(DATA_DIR, "camelyon17"),
         "PCam": os.path.join(DATA_DIR, "pcam"),
         "Kather2016": os.path.join(DATA_DIR, "kather2016"),
         "LC25000": os.path.join(DATA_DIR, "lc25000"),
@@ -67,7 +66,7 @@ def check_data():
 
 
 def check_packages():
-    required = ["torch", "torchvision", "transformers", "timm", "pyarrow",
+    required = ["torch", "torchvision", "transformers", "timm", "pyarrow", "huggingface_hub",
                 "sklearn", "PIL", "numpy", "pandas"]
     missing = []
     for pkg in required:
@@ -140,39 +139,23 @@ def menu_environment():
 def menu_download_data():
     header("DOWNLOAD DATA")
     print("""
-This downloads all datasets to ./data/ (~12 GB total):
-  1. CAMELYON17 WILDS  (~9 GB)  — HuggingFace: wltjr1007/Camelyon17-WILDS
-  2. PCam              (~1 GB)  — HuggingFace: p1atdev/parquet-imgnet or similar
-  3. Kather2016        (~100 MB) — Zenodo: CRC-VAL-HE-7K
-  4. LC25000           (~2 GB)  — manual download required (see instructions)
+Downloads and prepares datasets into ./data/ (~12 GB total), in the folders the
+pipeline reads, and writes data/MANIFEST.json (sources, sizes, checksums):
+  1. camelyon17  CAMELYON17-WILDS patches (~9 GB, Hugging Face)
+  2. pcam        PatchCamelyon (~1 GB, Hugging Face)
+  3. kather2016  CRC-VAL-HE-7K NORM/TUM tiles (~0.8 GB, official Zenodo archive)
+  4. lc25000     LC25000 lung/colon (~2 GB, Kaggle — needs a Kaggle API token)
 """)
-    choice = input("Download which? [1/2/3/all/q]: ").strip().lower()
+    choice = input("Download which? [1/2/3/4/all/check/q]: ").strip().lower()
     if choice == "q":
         return
-
-    os.makedirs(DATA_DIR, exist_ok=True)
-
-    if choice in ("1", "all"):
-        print(f"\n{YELLOW}Downloading CAMELYON17 WILDS...{RESET}")
-        code = ("from huggingface_hub import snapshot_download;"
-                "snapshot_download('wltjr1007/Camelyon17-WILDS', repo_type='dataset',"
-                f"local_dir='{os.path.join(DATA_DIR, 'camelyon17_wilds')}')")
-        subprocess.run([sys.executable, "-c", code])
-
-    if choice in ("2", "all"):
-        print(f"\n{YELLOW}Downloading PCam...{RESET}")
-        print("PCam parquet files: place them in data/pcam/ manually if this fails.")
-        code = ("from huggingface_hub import snapshot_download;"
-                "snapshot_download('bryanluk/pcam', repo_type='dataset',"
-                f"local_dir='{os.path.join(DATA_DIR, 'pcam')}')")
-        subprocess.run([sys.executable, "-c", code])
-
-    if choice in ("3", "all"):
-        print(f"\n{YELLOW}Downloading Kather2016...{RESET}")
-        url = "https://zenodo.org/record/1214456/files/CRC-VAL-HE-7K.zip"
-        subprocess.run(["wget", "-P", DATA_DIR, url])
-
-    input("\nPress Enter to return to menu...")
+    names = {"1": ["camelyon17"], "2": ["pcam"], "3": ["kather2016"], "4": ["lc25000"],
+             "all": [], "check": ["--check"]}.get(choice)
+    if names is None:
+        print(f"{RED}Unknown choice{RESET}")
+        input("Press Enter to continue...")
+        return
+    run_script(os.path.join(SCRIPTS, "download_data.py"), args=names)
 
 
 def menu_feature_extraction():

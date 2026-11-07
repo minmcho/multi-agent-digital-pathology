@@ -1,4 +1,5 @@
 # Data and features (too large for git)
+/data/
 features/
 *.npz
 *.parquet

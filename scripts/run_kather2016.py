@@ -77,7 +77,9 @@ def decode_image(image_dict):
 
 def extract_kather_images():
     """Extract TUM and NORM images from CRC-VAL-HE-7K parquet files."""
-    parquet_dir = '/workspace/kather2016_data'
+    parquet_dir = os.environ.get('KATHER_DIR', os.path.join(
+        os.environ.get('DATA_DIR', os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'data')),
+        'kather2016'))
     files = sorted([f for f in os.listdir(parquet_dir) if f.endswith('.parquet')])
 
     tum_images, tum_labels = [], []

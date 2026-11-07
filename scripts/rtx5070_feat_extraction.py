@@ -58,7 +58,7 @@ BACKBONE_CONFIGS = {
 }
 
 # Dataset paths (adjust to your local setup)
-DATA_DIR = os.environ.get('DATA_DIR', '/mnt/shared-workspace/shared/datasets')
+DATA_DIR = os.environ.get('DATA_DIR', os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'data'))
 OUTPUT_DIR = os.environ.get('OUTPUT_DIR', './features')
 
 DATASETS = {
