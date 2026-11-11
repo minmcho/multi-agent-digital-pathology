@@ -87,18 +87,33 @@ class PatchDataset(Dataset):
 # ============================================================
 # Model Loading
 # ============================================================
+class ConchClassifier(nn.Module):
+    """CONCH image encoder (embedding before the projection head) + linear head."""
+
+    def __init__(self, conch_model, num_classes=1, feat_dim=512):
+        super().__init__()
+        self.conch = conch_model
+        self.head = nn.Linear(feat_dim, num_classes)
+
+    def forward(self, x):
+        emb = self.conch.encode_image(x, proj_contrast=False, normalize=False)
+        return self.head(emb)
+
+
 def load_conch_model(num_classes=1, device='cuda'):
-    """Load CONCH for end-to-end fine-tuning."""
-    from transformers import ViTModel
-    import timm
-    
-    # CONCH is a CLIP-based vision encoder
-    # Load via timm for easier fine-tuning
-    model = timm.create_model(
-        "hf-hub:MahmoodLab/CONCH",
-        pretrained=True,
-        num_classes=num_classes,
+    """Load CONCH for end-to-end fine-tuning with the official CONCH package
+    (pip install git+https://github.com/Mahmoodlab/CONCH.git). CONCH is gated:
+    accept its terms on Hugging Face and log in, or set HF_TOKEN."""
+    from conch.open_clip_custom import create_model_from_pretrained
+    conch_model, _ = create_model_from_pretrained(
+        "conch_ViT-B-16", "hf_hub:MahmoodLab/conch",
+        hf_auth_token=os.environ.get("HF_TOKEN"),
     )
+    # Only the image tower is fine-tuned; drop the text tower to save memory.
+    for attr in ("text", "text_decoder"):
+        if hasattr(conch_model, attr):
+            setattr(conch_model, attr, nn.Identity())
+    model = ConchClassifier(conch_model, num_classes=num_classes)
     model = model.to(device)
     return model
 
@@ -181,17 +196,21 @@ def main():
     
     # Load data
     from torchvision import transforms
+    # CONCH preprocessing: bicubic resize to 448 + OpenAI CLIP mean/std (as in the CONCH package)
+    conch_mean = (0.48145466, 0.4578275, 0.40821073)
+    conch_std = (0.26862954, 0.26130258, 0.27577711)
+    bicubic = transforms.InterpolationMode.BICUBIC
     train_transform = transforms.Compose([
-        transforms.Resize((448, 448)),
+        transforms.Resize((448, 448), interpolation=bicubic),
         transforms.RandomHorizontalFlip(),
         transforms.RandomVerticalFlip(),
         transforms.ToTensor(),
-        transforms.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)),
+        transforms.Normalize(mean=conch_mean, std=conch_std),
     ])
     eval_transform = transforms.Compose([
-        transforms.Resize((448, 448)),
+        transforms.Resize((448, 448), interpolation=bicubic),
         transforms.ToTensor(),
-        transforms.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)),
+        transforms.Normalize(mean=conch_mean, std=conch_std),
     ])
     
     # Load datasets

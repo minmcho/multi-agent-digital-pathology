@@ -51,7 +51,7 @@ multi-agent-digital-pathology/
 | ViT-B (Phikon) | ViT-B | TCGA (SSL) | 768 |
 | CONCH | ViT-B | Pathology (CLIP) | 512 |
 | UNI | ViT-L | 100M pathology tiles (SSL) | 1024 |
-| Virchow | ViT-L | 1.5M WSI (SSL) | 1024 |
+| Virchow | ViT-H/14 (632M) | 1.5M WSI (SSL) | 2560 (CLS + mean patch) |
 
 ## Models
 

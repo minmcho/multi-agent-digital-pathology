@@ -110,7 +110,7 @@ export LC25000_DIR=./data/lc25000
 
 ## Phase 2: Feature Extraction (RTX 5070, ~5h)
 
-Extract frozen features from UNI (ViT-L), Virchow (ViT-L), and CONCH (ViT-B) for all datasets.
+Extract frozen features from UNI (ViT-L), Virchow (ViT-H), and CONCH (ViT-B) for all datasets.
 
 ```bash
 # Run all three backbones (or run them one at a time)
@@ -322,9 +322,10 @@ Or upload to Google Drive and share the link.
 - If disconnected, reconnect and resume from last checkpoint
 
 ### HuggingFace model access
-- UNI (`MahmoodLab/UNI`) and CONCH (`MahmoodLab/CONCH`) require HF account and model access approval
-- Request access at: https://huggingface.co/MahmoodLab/UNI
-- Virchow (`paige-ai/Virchow`) is publicly available
+- UNI (`MahmoodLab/UNI`), CONCH (`MahmoodLab/CONCH`) and Virchow (`paige-ai/Virchow`) are gated:
+  log in to Hugging Face and accept each model's terms on its model page
+- Virchow loads with timm (`pip install "timm>=0.9.11"`); CONCH needs its package:
+  `pip install git+https://github.com/Mahmoodlab/CONCH.git`
 - After approval, run `huggingface-cli login` and enter your HF token
 
 ### Data format issues

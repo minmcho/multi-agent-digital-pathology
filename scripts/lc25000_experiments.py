@@ -32,7 +32,7 @@ RESULTS_DIR = os.environ.get('LC25000_RESULTS_DIR', './lc25000_results')
 
 BACKBONE_DIMS = {
     'resnet18': 512, 'vit_tiny': 192, 'vit_b': 768,
-    'uni': 1024, 'virchow': 1024, 'conch': 512,
+    'uni': 1024, 'virchow': 2560, 'conch': 512,
 }
 
 # LC25000 class mapping (binary: tumor vs benign)

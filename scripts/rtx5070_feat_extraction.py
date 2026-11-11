@@ -9,7 +9,10 @@ Usage (on machine with RTX 5070):
   python rtx5070_feat_extraction.py --backbone all
 
 Requirements:
-  pip install torch torchvision transformers timm pillow scikit-image
+  pip install torch torchvision transformers "timm>=0.9.11" pillow scikit-image
+  pip install git+https://github.com/Mahmoodlab/CONCH.git   # CONCH loader
+  # UNI, Virchow and CONCH are gated: accept each model's terms on Hugging Face,
+  # then `huggingface-cli login` (or set HF_TOKEN).
   # For WILDS: pip install wilds
 
 Notes:
@@ -43,17 +46,17 @@ BACKBONE_CONFIGS = {
     },
     'virchow': {
         'model_id': 'paige-ai/Virchow',
-        'feature_dim': 1024,
-        'batch_size': 32,  # ViT-L, slightly larger
+        'feature_dim': 2560,  # concat(CLS 1280, mean patch tokens 1280), per model card
+        'batch_size': 16,  # ViT-H/14, 632M params
         'input_size': 224,
-        'type': 'hf',  # HuggingFace transformers
+        'type': 'timm',  # loaded with timm (SwiGLU MLP), per model card
     },
     'conch': {
         'model_id': 'MahmoodLab/CONCH',
         'feature_dim': 512,
         'batch_size': 128,
         'input_size': 448,  # CONCH uses 448x448
-        'type': 'hf',
+        'type': 'conch',  # official CONCH package (open_clip based)
     },
 }
 
@@ -119,45 +122,58 @@ def load_uni_model(device):
     return model, transform, 1024
 
 
+class VirchowEmbedding(torch.nn.Module):
+    """Virchow tile embedding as recommended on the model card:
+    concat(CLS token, mean of patch tokens) -> 2560-d."""
+
+    def __init__(self, model):
+        super().__init__()
+        self.model = model
+
+    def forward(self, x):
+        tokens = self.model(x)  # (B, 1 + 256, 1280)
+        return torch.cat([tokens[:, 0], tokens[:, 1:].mean(1)], dim=-1)
+
+
 def load_virchow_model(device):
-    """Load Virchow model (ViT-L, 300M params) from HuggingFace."""
-    from transformers import AutoModel, AutoImageProcessor
-    processor = AutoImageProcessor.from_pretrained("paige-ai/Virchow")
-    model = AutoModel.from_pretrained("paige-ai/Virchow")
-    model = model.to(device).half()
+    """Load Virchow (ViT-H/14, 632M params) via timm, following the model card."""
+    import timm
+    from timm.layers import SwiGLUPacked
+    from timm.data import resolve_data_config
+    from timm.data.transforms_factory import create_transform
+    base = timm.create_model(
+        "hf-hub:paige-ai/Virchow",
+        pretrained=True,
+        mlp_layer=SwiGLUPacked,
+        act_layer=torch.nn.SiLU,
+    )
+    transform = create_transform(**resolve_data_config(base.pretrained_cfg, model=base))
+    model = VirchowEmbedding(base).to(device).half()
     model.eval()
-    
-    from torchvision import transforms
-    transform = transforms.Compose([
-        transforms.Resize(224),
-        transforms.CenterCrop(224),
-        transforms.ToTensor(),
-        transforms.Normalize(
-            mean=(0.485, 0.456, 0.406),
-            std=(0.229, 0.224, 0.225)
-        ),
-    ])
-    return model, transform, 1024
+    return model, transform, 2560
+
+
+class ConchImageEmbedding(torch.nn.Module):
+    """CONCH image embedding before the projection head (official linear-probe usage)."""
+
+    def __init__(self, model):
+        super().__init__()
+        self.model = model
+
+    def forward(self, x):
+        return self.model.encode_image(x, proj_contrast=False, normalize=False)
 
 
 def load_conch_model(device):
-    """Load CONCH model (ViT-B, 86M params) from HuggingFace."""
-    from transformers import AutoModel, AutoImageProcessor
-    processor = AutoImageProcessor.from_pretrained("MahmoodLab/CONCH")
-    model = AutoModel.from_pretrained("MahmoodLab/CONCH")
-    model = model.to(device).half()
+    """Load CONCH (ViT-B/16 image encoder, 448px) with the official CONCH package."""
+    from conch.open_clip_custom import create_model_from_pretrained
+    base, transform = create_model_from_pretrained(
+        "conch_ViT-B-16", "hf_hub:MahmoodLab/conch",
+        hf_auth_token=os.environ.get("HF_TOKEN"),
+    )
+    # transform: Resize(448, bicubic) + CenterCrop(448) + OpenAI CLIP mean/std
+    model = ConchImageEmbedding(base).to(device).half()
     model.eval()
-    
-    from torchvision import transforms
-    transform = transforms.Compose([
-        transforms.Resize(448),
-        transforms.CenterCrop(448),
-        transforms.ToTensor(),
-        transforms.Normalize(
-            mean=(0.485, 0.456, 0.406),
-            std=(0.229, 0.224, 0.225)
-        ),
-    ])
     return model, transform, 512
 
 

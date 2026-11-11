@@ -163,7 +163,7 @@ def menu_feature_extraction():
     print("""
 Extracts frozen features from foundation models for all datasets.
   1. UNI      (ViT-L, 1024-dim)   ~1.5h
-  2. Virchow  (ViT-L, 1024-dim)   ~1.5h
+  2. Virchow  (ViT-H, 2560-dim)   ~1.5h
   3. CONCH    (ViT-B, 512-dim)    ~2h  (448x448 input)
   4. All three (~5h total)
 """)

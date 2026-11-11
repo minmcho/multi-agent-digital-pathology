@@ -39,7 +39,7 @@ RESULTS_DIR = os.environ.get('FROZEN_RESULTS_DIR', './frozen_results')
 
 BACKBONE_DIMS = {
     'resnet18': 512, 'vit_tiny': 192, 'vit_b': 768,
-    'uni': 1024, 'virchow': 1024, 'conch': 512,
+    'uni': 1024, 'virchow': 2560, 'conch': 512,
 }
 
 MODELS = ['baseline', 'dann', 'disentanglement', 'multi_agent', 'mixstyle']

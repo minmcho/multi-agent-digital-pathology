@@ -1,10 +1,12 @@
 """
-Colab Pro: Virchow (ViT-L) End-to-End Fine-Tuning
+Colab Pro: Virchow (ViT-H/14) End-to-End Fine-Tuning
 
 Paste this entire script into a Colab Pro notebook cell.
 Set runtime: GPU (L4 or A100), enable internet.
 
-Virchow is ViT-L (300M params). Same setup as UNI but uses HuggingFace transformers.
+Virchow is ViT-H/14 (632M params). Same setup as UNI; loaded with timm as on the model card.
+The classifier uses the card's 2560-d embedding: concat(CLS token, mean of patch tokens).
+Virchow is gated: accept its terms on Hugging Face and log in before running.
 
 Models: baseline, dann, mixstyle
 Dataset: CAMELYON17 (ID train + OOD test)
@@ -12,7 +14,7 @@ Dataset: CAMELYON17 (ID train + OOD test)
 # ============================================================
 # Colab Setup Cell 1: Install dependencies
 # ============================================================
-# !pip install transformers timm pyarrow scikit-learn --quiet
+# !pip install "timm>=0.9.11" pyarrow scikit-learn --quiet
 
 # ============================================================
 # Colab Setup Cell 2: Mount Google Drive
@@ -104,24 +106,28 @@ class PatchDataset(Dataset):
 # Model: Virchow via HuggingFace
 # ============================================================
 def load_virchow_model(device, grad_checkpointing=False):
-    from transformers import ViTModel
-    model = ViTModel.from_pretrained("paige-ai/Virchow", add_pooling_layer=False)
-    
-    # Add classification head
+    import timm
+    from timm.layers import SwiGLUPacked
+    backbone = timm.create_model(
+        "hf-hub:paige-ai/Virchow", pretrained=True,
+        mlp_layer=SwiGLUPacked, act_layer=nn.SiLU,
+    )
+
+    # Classification head on the model-card embedding
     class VirchowClassifier(nn.Module):
-        def __init__(self, vit, feat_dim=1024):
+        def __init__(self, vit, feat_dim=2560):
             super().__init__()
             self.vit = vit
             self.classifier = nn.Linear(feat_dim, 1)
         def forward(self, x):
-            outputs = self.vit(x)
-            cls_token = outputs.last_hidden_state[:, 0, :]
-            return self.classifier(cls_token).squeeze(-1)
-    
-    model = VirchowClassifier(model, feat_dim=1024)
+            tokens = self.vit(x)  # (B, 1 + 256, 1280)
+            emb = torch.cat([tokens[:, 0], tokens[:, 1:].mean(1)], dim=-1)
+            return self.classifier(emb).squeeze(-1)
+
+    model = VirchowClassifier(backbone, feat_dim=2560)
     model = model.to(device)
     if grad_checkpointing:
-        model.vit.gradient_checkpointing_enable()
+        model.vit.set_grad_checkpointing(True)
         print("  Gradient checkpointing enabled")
     return model
 
